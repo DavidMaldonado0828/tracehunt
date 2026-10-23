@@ -1,0 +1,23 @@
+services:
+  dynamodb-local:
+    # imagen oficial de AWS
+    image: amazon/dynamodb-local
+    container_name: tracehunt-dynamodb
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./docker/dynamodb:/home/dynamodblocal/data
+
+  api:
+    # carpeta donde está Dockerfile
+    build: ./backend
+    container_name: tracehunt-api
+    env_file:
+      - ./backend/.env
+    environment:
+      DYNAMODB_ENDPOINT_URL: http://dynamodb-local:8000
+    ports:
+      - "8080:8000"
+    depends_on:
+      - dynamodb-local

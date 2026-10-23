@@ -1,0 +1,82 @@
+{
+  "TableName": "Alerts",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "alert_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "status",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "created_at_alert",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "severity",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "owner_user_id",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "alert_id",
+      "KeyType": "HASH"
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST",
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "StatusCreatedIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "status",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at_alert",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "SeverityCreatedIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "severity",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at_alert",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "OwnerCreatedIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "owner_user_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "created_at_alert",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    }
+  ]
+}

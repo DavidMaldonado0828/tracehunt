@@ -1,0 +1,62 @@
+{
+  "TableName": "Simulations",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "simulation_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "status",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "requested_at_sim",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "requested_by_user_id",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "simulation_id",
+      "KeyType": "HASH"
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST",
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "StatusRequestedIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "status",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "requested_at_sim",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "RequesterRequestedIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "requested_by_user_id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "requested_at_sim",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    }
+  ]
+}

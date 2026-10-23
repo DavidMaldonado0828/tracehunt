@@ -1,0 +1,142 @@
+{
+  "TableName": "Events",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "event_id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "date_bucket",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "timestamp_event",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "source_ip",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "username_key",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "owner_date_bucket",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "owner_source_ip",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "owner_username_key",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "AttributeName": "event_id",
+      "KeyType": "HASH"
+    }
+  ],
+  "BillingMode": "PAY_PER_REQUEST",
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "DateTimestampIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "date_bucket",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "timestamp_event",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "SourceIpTimestampIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "source_ip",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "timestamp_event",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "UsernameTimestampIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "username_key",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "timestamp_event",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "OwnerDateTimestampIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "owner_date_bucket",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "timestamp_event",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "OwnerSourceIpTimestampIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "owner_source_ip",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "timestamp_event",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    },
+    {
+      "IndexName": "OwnerUsernameTimestampIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "owner_username_key",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "timestamp_event",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      }
+    }
+  ]
+}

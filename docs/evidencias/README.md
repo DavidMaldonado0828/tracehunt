@@ -55,3 +55,61 @@ Finalmente, se consultó el estado de los servicios mediante `docker compose ps`
 Se configuró la orquestación local de TraceHunt mediante Docker Compose, integrando la API y DynamoDB Local en una misma red. La configuración permite iniciar ambos servicios con un único comando y establece el almacenamiento persistente para los datos de la base de datos local. Los registros confirmaron el inicio de los procesos de la API y de DynamoDB Local.
 
 Esta evidencia demuestra la configuración y el arranque de los servicios. La comunicación funcional entre la API y DynamoDB Local debe validarse adicionalmente mediante una operación real de lectura o escritura.
+
+## Evidencias: Integración con DynamoDB mediante Boto3
+
+### Objetivo
+
+Verificar la conexión con DynamoDB Local mediante Boto3 y comprobar la creación de tablas y el registro de datos desde Python.
+
+### 1. Prueba de conexión y registro mediante Boto3
+
+![Prueba de Boto3 y registro en DynamoDB](prueba_boto3.png)
+
+Esta evidencia muestra la ejecución de una prueba en Python utilizando Boto3 para interactuar con DynamoDB. Se verifica la operación de registro de datos realizada desde el código Python.
+
+### 2. Tablas creadas en DynamoDB
+
+![Tablas creadas en DynamoDB](tablas_dynamodb.png)
+
+Esta evidencia muestra las tablas creadas en DynamoDB Local, permitiendo comprobar la existencia de las estructuras de almacenamiento configuradas para el proyecto TraceHunt.
+
+### Resultado
+
+Las evidencias documentan la interacción de Python con DynamoDB mediante Boto3 y la visualización de las tablas creadas para el proyecto. En conjunto, permiten respaldar las pruebas de integración con la base de datos local.
+
+## Evidencias: Autenticación y validación de JWT
+
+### Objetivo
+
+Documentar las pruebas de generación y validación de tokens JWT, incluyendo la verificación de su firma, la detección de modificaciones en el contenido y el rechazo de tokens expirados.
+
+### 1. Generación del hash de contraseña
+
+![Evidencia de generación del hash](hash.png)
+
+Esta evidencia muestra el proceso de generación de un hash para una contraseña. El hash permite almacenar la contraseña de forma segura, evitando guardar su valor original en texto plano.
+
+### 2. Validación de un token válido
+
+![Evidencia de token válido](tokenValido.png)
+
+Esta prueba verifica que un token JWT con una firma válida y que cumple las condiciones de validación sea aceptado por la aplicación.
+
+### 3. Rechazo de un token alterado
+
+![Evidencia de token alterado](tokenAlterado.png)
+
+Esta evidencia demuestra la validación de la firma del JWT. Cuando se modifica el contenido del token sin generar una firma válida correspondiente, la verificación debe fallar y el token debe ser rechazado.
+
+### 4. Rechazo de un token expirado
+
+![Evidencia de token expirado](tokenExpirado.png)
+
+Esta prueba comprueba que la aplicación rechace un token cuya fecha de expiración (`exp`) ya ha pasado, aunque su firma sea válida.
+
+### Resultado
+
+Las evidencias documentan las pruebas de generación de hashes de contraseñas y de validación de JWT. Se contemplan tres escenarios para los tokens: aceptación de un token válido, rechazo de un token alterado y rechazo de un token expirado.
+
+Estas pruebas contribuyen a verificar la integridad y la vigencia de los tokens utilizados en la autenticación de TraceHunt.

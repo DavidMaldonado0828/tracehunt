@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     dynamodb_endpoint_url: str | None = None
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
+    jwt_secret: str | None = None
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60
 
     users_table: str = "Users"
     events_table: str = "Events"

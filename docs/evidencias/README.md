@@ -113,3 +113,52 @@ Esta prueba comprueba que la aplicación rechace un token cuya fecha de expiraci
 Las evidencias documentan las pruebas de generación de hashes de contraseñas y de validación de JWT. Se contemplan tres escenarios para los tokens: aceptación de un token válido, rechazo de un token alterado y rechazo de un token expirado.
 
 Estas pruebas contribuyen a verificar la integridad y la vigencia de los tokens utilizados en la autenticación de TraceHunt.
+
+
+## 5. CONSTRUCCIÓN DE DOCKER
+
+![Evidencia de construcción de Docker](./docker-compose-build.png)
+
+Esta prueba verifica la construcción de las imágenes de Docker necesarias para ejecutar los servicios de TraceHunt, incluyendo la API y el inicializador de tablas de DynamoDB. Durante este proceso se instalan las dependencias y se incorporan los archivos necesarios para ejecutar los componentes del proyecto.
+
+### Resultado
+
+La construcción de las imágenes finalizó correctamente, preparando los servicios necesarios para ejecutar la API y automatizar la inicialización de las tablas de DynamoDB.
+
+
+
+
+## 6. EJECUCIÓN DE DOCKER COMPOSE
+
+![Evidencia de ejecución de Docker Compose](./docker-compose-up.png)
+
+Esta prueba verifica el arranque de los servicios definidos en el archivo `docker-compose.yml`. Durante la ejecución, Docker Compose inicia DynamoDB Local y ejecuta el inicializador de tablas antes de permitir que la API de TraceHunt comience a funcionar.
+
+### Resultado
+
+Los servicios se iniciaron correctamente. El inicializador verificó la disponibilidad de las tablas de DynamoDB y finalizó satisfactoriamente. Después, la API completó su proceso de arranque y quedó disponible para recibir solicitudes.
+
+
+
+
+## 7. VERIFICACIÓN DE LAS TABLAS DE DYNAMODB
+
+![Evidencia de lectura de tablas por el inicializador](./lectura_de_tablas_inicializador.png)
+
+Esta prueba verifica el funcionamiento del inicializador encargado de leer las definiciones de las tablas desde los archivos JSON del proyecto. El proceso comprueba la existencia y disponibilidad de las tablas `Users`, `Events`, `Alerts`, `AuditLogs` y `Simulations`, evitando intentar crear nuevamente aquellas que ya existen.
+
+### Resultado
+
+El inicializador reconoció las cinco tablas existentes y confirmó que todas se encontraban en estado `ACTIVE`. El proceso terminó correctamente con código de salida `0`, indicando que la verificación de las tablas se completó sin errores.
+
+
+
+## 8. VISUALIZACIÓN DE LOS REGISTROS DE DOCKER
+
+![Evidencia de visualización de registros de Docker Compose](./docker-compose-logs-f__VerRegistros.png)
+
+Esta prueba muestra la consulta de los registros de los contenedores mediante Docker Compose. Los registros permiten observar los mensajes generados durante la inicialización de DynamoDB y el arranque de la API, facilitando el seguimiento del proceso y la identificación de posibles errores.
+
+### Resultado
+
+Los registros permitieron comprobar que el inicializador terminó correctamente y que la API inició después de completar la verificación de las tablas. Esta información facilita el diagnóstico de problemas durante el arranque de los servicios.

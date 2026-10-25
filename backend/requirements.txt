@@ -2,6 +2,7 @@ fastapi==0.115.12
 boto3
 pyjwt
 pwdlib[argon2]
+email-validator
 pydantic-settings==2.8.1
 python-dotenv==1.0.1
 uvicorn[standard]==0.34.0

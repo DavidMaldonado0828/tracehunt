@@ -29,6 +29,18 @@ class UserCreate(BaseModel):
     model_config = {"extra": "forbid"}
 
 
+class UserRoleUpdate(BaseModel):
+    role: Role
+
+    model_config = {"extra": "forbid"}
+
+
+class UserStatusUpdate(BaseModel):
+    status: UserStatus
+
+    model_config = {"extra": "forbid"}
+
+
 class UserUpdate(BaseModel):
     """Permite cambiar únicamente nombre visible, rol y estado de cuenta."""
 

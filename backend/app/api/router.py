@@ -13,8 +13,8 @@ api_router = APIRouter()
 
 # Cada módulo define sus rutas del área; sus operaciones se agregarán al
 # implementar las tareas correspondientes del Workplan.
-api_router.include_router(auth_router)
-api_router.include_router(users_router)
+api_router.include_router(auth_router, prefix="/auth", tags=["auth"])
+api_router.include_router(users_router, prefix="/users")
 api_router.include_router(events_router)
 api_router.include_router(alerts_router)
 api_router.include_router(simulations_router)

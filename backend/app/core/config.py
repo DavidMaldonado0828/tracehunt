@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     jwt_secret: str | None = None
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60
+    login_rate_limit_attempts: int = 5
+    login_rate_limit_window_seconds: int = 900
 
     users_table: str = "Users"
     events_table: str = "Events"

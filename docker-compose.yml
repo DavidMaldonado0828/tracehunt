@@ -1,6 +1,5 @@
 services:
   dynamodb-local:
-    # imagen oficial de AWS
     image: amazon/dynamodb-local
     container_name: tracehunt-dynamodb
     command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
@@ -9,9 +8,25 @@ services:
     volumes:
       - ./docker/dynamodb:/home/dynamodblocal/data
 
-  api:
-    # carpeta donde está Dockerfile
+  dynamodb-init:
     build: ./backend
+    image: tracehunt-backend:local
+    container_name: tracehunt-dynamodb-init
+    command: ["python", "/dynamodb/init_tables.py"]
+    environment:
+      DYNAMODB_ENDPOINT_URL: http://dynamodb-local:8000
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    volumes:
+      - ./dynamodb:/dynamodb:ro
+    depends_on:
+      - dynamodb-local
+    restart: "no"
+
+  api:
+    build: ./backend
+    image: tracehunt-backend:local
     container_name: tracehunt-api
     env_file:
       - ./backend/.env
@@ -20,4 +35,5 @@ services:
     ports:
       - "8080:8000"
     depends_on:
-      - dynamodb-local
+      dynamodb-init:
+        condition: service_completed_successfully

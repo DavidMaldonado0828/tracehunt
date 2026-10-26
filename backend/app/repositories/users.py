@@ -58,9 +58,12 @@ def create_user(user: UserInDB) -> UserInDB:
     return user
 
 
-def get_by_email(email: str) -> UserInDB | None:
+def get_by_email(email: str, consistent: bool = False) -> UserInDB | None:
     """Lee por la PK aprobada tras aplicar la misma normalización del schema."""
-    response = _get_users_table().get_item(Key={"email_normalized": normalize_email(email)})
+    response = _get_users_table().get_item(
+        Key={"email_normalized": normalize_email(email)},
+        ConsistentRead=consistent,
+    )
     item = response.get("Item")
     return _item_to_user(item) if item is not None else None
 

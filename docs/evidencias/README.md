@@ -180,3 +180,8 @@ Demuestra que el sistema rechaza el inicio de sesión cuando el correo electrón
 ![Error por credenciales inválidas](./adminCredencialInvalido.png)
 
 Demuestra que el sistema rechaza el inicio de sesión cuando la contraseña proporcionada es incorrecta.
+### Evidencia: Creación del administrador inicial
+
+Se verifica la creación de la cuenta administradora inicial en DynamoDB. Se comprueba que el usuario existe, tiene el rol `admin` y su estado es `active`.
+
+![Administrador inicial creado](createdAdmin.png)

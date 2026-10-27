@@ -180,6 +180,33 @@ Demuestra que el sistema rechaza el inicio de sesión cuando el correo electrón
 ![Error por credenciales inválidas](./adminCredencialInvalido.png)
 
 Demuestra que el sistema rechaza el inicio de sesión cuando la contraseña proporcionada es incorrecta.
+
+
+### Evidencias de administración de usuarios y autenticación
+
+![Creación de usuario](./crearUsuario.png)
+
+Demuestra la creación exitosa de un usuario con los datos y el rol asignados.
+
+![Listado de usuarios](./listarUsuarios.png)
+
+Demuestra que el administrador puede consultar los usuarios registrados sin exponer contraseñas ni hashes.
+
+![Cambio de rol](./cambiaRol.png)
+
+Demuestra que el administrador puede modificar el rol de un usuario entre `admin` y `analyst`.
+
+![Cambio de estado del usuario](./cambiarEstado.png)
+
+Demuestra que el administrador puede activar y desactivar una cuenta de usuario.
+
+![Rechazo de usuario duplicado](./usuarioRepetido.png)
+
+Demuestra que el sistema rechaza la creación de una cuenta con un correo electrónico ya registrado.
+
+![Límite de intentos fallidos de inicio de sesión](./intentosFallidos.png)
+
+Demuestra que el sistema limita los intentos fallidos de inicio de sesión y responde con `429 Too Many Requests` al superar el umbral configurado.
 ### Evidencia: Creación del administrador inicial
 
 Se verifica la creación de la cuenta administradora inicial en DynamoDB. Se comprueba que el usuario existe, tiene el rol `admin` y su estado es `active`.

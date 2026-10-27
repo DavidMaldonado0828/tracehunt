@@ -162,3 +162,9 @@ Esta prueba muestra la consulta de los registros de los contenedores mediante Do
 ### Resultado
 
 Los registros permitieron comprobar que el inicializador terminó correctamente y que la API inició después de completar la verificación de las tablas. Esta información facilita el diagnóstico de problemas durante el arranque de los servicios.
+
+### Evidencia: Creación del administrador inicial
+
+Se verifica la creación de la cuenta administradora inicial en DynamoDB. Se comprueba que el usuario existe, tiene el rol `admin` y su estado es `active`.
+
+![Administrador inicial creado](createdAdmin.png)

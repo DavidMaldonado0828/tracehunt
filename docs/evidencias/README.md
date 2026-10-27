@@ -207,3 +207,8 @@ Demuestra que el sistema rechaza la creación de una cuenta con un correo electr
 ![Límite de intentos fallidos de inicio de sesión](./intentosFallidos.png)
 
 Demuestra que el sistema limita los intentos fallidos de inicio de sesión y responde con `429 Too Many Requests` al superar el umbral configurado.
+### Evidencia: Creación del administrador inicial
+
+Se verifica la creación de la cuenta administradora inicial en DynamoDB. Se comprueba que el usuario existe, tiene el rol `admin` y su estado es `active`.
+
+![Administrador inicial creado](createdAdmin.png)

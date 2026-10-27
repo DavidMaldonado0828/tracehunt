@@ -185,3 +185,74 @@ Demuestra que el sistema rechaza el inicio de sesión cuando la contraseña prop
 Se verifica la creación de la cuenta administradora inicial en DynamoDB. Se comprueba que el usuario existe, tiene el rol `admin` y su estado es `active`.
 
 ![Administrador inicial creado](createdAdmin.png)
+
+
+### PRUEBAS UNITARIAS DE ESCENARIOS
+
+![Evidencia de pruebas unitarias de escenarios](pruebas_scenarios.png)
+
+Estas pruebas verifican el catálogo de escenarios, los patrones de las reglas AUTH-001, AUTH-002 y AUTH-003, el estado desactivado de AUTH-004 y el tráfico normal.
+
+#### Resultado
+
+Las 7 pruebas finalizaron correctamente en 0.08 segundos.
+
+### PRUEBAS DEL REPOSITORIO DE SIMULACIONES
+
+![Evidencia de pruebas del repositorio de simulaciones](pruebas-simulations.png)
+
+Estas pruebas verifican la creación condicional de simulaciones, el manejo de identificadores duplicados e inválidos, las consultas y las actualizaciones paginadas.
+
+#### Resultado
+
+Las 18 pruebas finalizaron correctamente en 0.88 segundos.
+
+### EJECUCIÓN DE PRUEBAS UNITARIAS
+
+![Evidencia de ejecución de pruebas unitarias](pruebas_unitarias_11_pasadas.png)
+
+La ejecución muestra pruebas del repositorio de eventos y del esquema de simulaciones, incluyendo escrituras por lotes, reintentos de elementos no procesados y validación de parámetros.
+
+#### Resultado
+
+Las 11 pruebas finalizaron correctamente en 0.23 segundos.
+
+### PRUEBAS DEL ESQUEMA DE SIMULACIONES
+
+![Evidencia de pruebas del esquema de simulaciones](pruebas-schema-simulations.png)
+
+Estas pruebas verifican los valores predeterminados y rechazan cantidades de eventos fuera de rango, periodos invertidos y periodos mayores a 30 días.
+
+#### Resultado
+
+Las 5 pruebas finalizaron correctamente en 0.12 segundos.
+
+### PRUEBAS DEL REPOSITORIO DE EVENTOS
+
+![Evidencia de pruebas del repositorio de eventos](pruebas-unitarias-events-repository.png)
+
+Estas pruebas verifican la escritura de eventos en lotes, la división de lotes mayores a 25 elementos, los reintentos de `UnprocessedItems` y el manejo del agotamiento de reintentos.
+
+#### Resultado
+
+Las 6 pruebas finalizaron correctamente en 0.16 segundos.
+
+### PRUEBAS DEL SERVICIO DE SIMULACIONES
+
+![Evidencia de pruebas del servicio de simulaciones](pruebas_simulator_service.png)
+
+Estas pruebas verifican la creación idempotente de solicitudes, la validación de parámetros, el acceso según el propietario, las transiciones de estado y la escritura de eventos en lotes.
+
+#### Resultado
+
+Las 21 pruebas finalizaron correctamente en 1.30 segundos.
+
+### PRUEBAS DEL GENERADOR DE EVENTOS
+
+![Evidencia de pruebas del generador de eventos](pruebas_generator.png)
+
+Estas pruebas verifican la cantidad generada, los IDs estables, los campos de los eventos, los rangos temporales, las IP reservadas, los escenarios y la reproducibilidad mediante seed.
+
+#### Resultado
+
+Las 15 pruebas finalizaron correctamente en 0.37 segundos.

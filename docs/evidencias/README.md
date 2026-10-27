@@ -163,6 +163,23 @@ Esta prueba muestra la consulta de los registros de los contenedores mediante Do
 
 Los registros permitieron comprobar que el inicializador terminó correctamente y que la API inició después de completar la verificación de las tablas. Esta información facilita el diagnóstico de problemas durante el arranque de los servicios.
 
+### Evidencias de autenticación
+
+![Inicio de sesión exitoso del administrador](./adminExitoso.png)
+
+Demuestra que el administrador puede iniciar sesión con credenciales válidas y obtener un token de acceso.
+
+![Consulta de información del administrador autenticado](./adminMe.png)
+
+Demuestra que el endpoint `GET /auth/me` devuelve la información del usuario autenticado sin exponer `password_hash`.
+
+![Error por correo inexistente](./adminErrorCorreo.png)
+
+Demuestra que el sistema rechaza el inicio de sesión cuando el correo electrónico no está registrado.
+
+![Error por credenciales inválidas](./adminCredencialInvalido.png)
+
+Demuestra que el sistema rechaza el inicio de sesión cuando la contraseña proporcionada es incorrecta.
 ### Evidencia: Creación del administrador inicial
 
 Se verifica la creación de la cuenta administradora inicial en DynamoDB. Se comprueba que el usuario existe, tiene el rol `admin` y su estado es `active`.

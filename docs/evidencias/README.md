@@ -283,3 +283,37 @@ Estas pruebas verifican la cantidad generada, los IDs estables, los campos de lo
 #### Resultado
 
 Las 15 pruebas finalizaron correctamente en 0.37 segundos.
+
+## Evidencias del simulador
+
+Las siguientes capturas muestran las pruebas realizadas sobre los endpoints del simulador de TraceHunt mediante Swagger UI. Se documentan la gestión de errores, la generación de simulaciones, la consulta del listado, la búsqueda por identificador y el comportamiento de la idempotencia.
+
+### 1. Manejo de errores (`errorMes`)
+
+Se evidencia la respuesta de la API ante una solicitud que genera un error, verificando el código HTTP y el mensaje devuelto al cliente.
+
+![Evidencia del manejo de errores](errorMes.png)
+
+### 2. Generación de simulaciones (`generarSimulador`)
+
+Se muestra la solicitud para crear y ejecutar una simulación, junto con la respuesta que contiene su identificador, estado y resultados disponibles.
+
+![Evidencia de generación de simulaciones](generarSimulador.png)
+
+### 3. Listado de simulaciones (`listarSimulacion`)
+
+Se evidencia la consulta de las simulaciones asociadas al usuario autenticado, incluyendo los elementos devueltos y la información de paginación cuando corresponde.
+
+![Evidencia del listado de simulaciones](listarSimulacion.png)
+
+### 4. Consulta por identificador (`simuladorId`)
+
+Se muestra la consulta de una simulación específica mediante su identificador, permitiendo revisar su estado y los resultados expuestos por la API.
+
+![Evidencia de consulta por ID](simuladorId.png)
+
+### 5. Idempotencia (`simuladorIdempotencia`)
+
+Se documenta la prueba de solicitudes repetidas utilizando la misma clave de idempotencia, para verificar que el sistema evita crear simulaciones duplicadas y gestiona correctamente la reutilización de la clave.
+
+![Evidencia de idempotencia del simulador](simuladorIdempotencia.png)

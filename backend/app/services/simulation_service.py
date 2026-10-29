@@ -8,6 +8,7 @@ import secrets
 from datetime import datetime, timezone
 from typing import Any
 
+import boto3
 from boto3.dynamodb.types import TypeSerializer
 from fastapi import HTTPException
 
@@ -158,10 +159,19 @@ def _serialize_events_for_low_level_client(
 def _get_events_repository() -> EventsRepository:
     """Construye el repositorio de eventos con la configuración común."""
     settings = get_settings()
-    dynamodb = get_dynamodb_resource()
+    client_options: dict[str, str] = {"region_name": settings.aws_region}
+
+    if settings.dynamodb_endpoint_url:
+        client_options["endpoint_url"] = settings.dynamodb_endpoint_url
+
+    if settings.aws_access_key_id and settings.aws_secret_access_key:
+        client_options["aws_access_key_id"] = settings.aws_access_key_id
+        client_options["aws_secret_access_key"] = settings.aws_secret_access_key
+
+    client = boto3.client("dynamodb", **client_options)
 
     return EventsRepository(
-        client=dynamodb.meta.client,
+        client=client,
         table_name=settings.events_table,
     )
 

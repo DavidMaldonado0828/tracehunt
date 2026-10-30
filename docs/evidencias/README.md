@@ -317,3 +317,46 @@ Se muestra la consulta de una simulación específica mediante su identificador,
 Se documenta la prueba de solicitudes repetidas utilizando la misma clave de idempotencia, para verificar que el sistema evita crear simulaciones duplicadas y gestiona correctamente la reutilización de la clave.
 
 ![Evidencia de idempotencia del simulador](simuladorIdempotencia.png)
+
+## Evidencias – Servicio de Alertas
+
+Se ejecutaron pruebas de integración directamente desde la consola, utilizando Python dentro del contenedor `api` de Docker Compose. Las pruebas verifican el funcionamiento de los endpoints de alertas, autenticación, permisos, cambios de estado, asignaciones y auditoría.
+
+### Cobertura de las pruebas
+
+| N.º | Prueba | Resultado esperado |
+|---|---|---|
+| 1 | Consultar alertas sin autenticación | `401 Unauthorized` |
+| 2 | Ana consulta sus propias alertas | `200 OK` – solo muestra las de su propiedad |
+| 3 | Beto consulta sus alertas | `200 OK` – respeta la propiedad |
+| 4 | Administrador consulta todas las alertas abiertas | `200 OK` – muestra las tres alertas |
+| 5 | Filtrar alertas por gravedad y estado | `200 OK` – resultados coincidentes |
+| 6 | Consultar con un estado inválido | `422 Unprocessable Entity` |
+| 7–8 | Utilizar límites de paginación inválidos (`0` y `101`) | `422 Unprocessable Entity` |
+| 9 | Enviar un cursor de paginación inválido | `400` o `422`, nunca `5xx` |
+| 10 | Consultar el detalle de una alerta propia | `200 OK` |
+| 11 | Consultar una alerta perteneciente a otro analista | `404 Not Found` – misma respuesta que para una alerta inexistente |
+| 12 | Cambiar estado de `open` a `investigating` | `200 OK` |
+| 13 | Intentar una transición no permitida (`investigating` → `open`) | `409 Conflict` |
+| 14–15 | Enviar un estado inválido o campos adicionales | `422 Unprocessable Entity` |
+| 16–17 | Modificar una alerta ajena o realizar la petición sin autenticación | `404` / `401` |
+| 18 | Ana se asigna una alerta a sí misma | `200 OK` |
+| 19 | Ana intenta asignar la alerta a Beto | `422 Unprocessable Entity` |
+| 20 | Administrador asigna una alerta a Beto | `200 OK` |
+| 21 | Asignar una alerta a un usuario inexistente | `422 Unprocessable Entity` |
+| 22 | Consultar el historial de una alerta propia | `200 OK` – registra creación y cambio de estado |
+| 23 | Consultar el historial de una alerta ajena | `404 Not Found` |
+| 24 | Paginar el historial de auditoría | `200 OK` – páginas con registros diferentes |
+
+### Entorno de ejecución
+
+Las pruebas se ejecutaron desde la terminal mediante Python y el contenedor `api` de Docker Compose. Se utilizó `urllib` para enviar solicitudes HTTP directamente a los endpoints de la aplicación, sin utilizar Swagger.
+
+Se crearon dos usuarios analistas, tres alertas de prueba y se utilizó la cuenta de administrador configurada en el entorno.
+
+Al finalizar, se eliminaron los registros creados exclusivamente para las pruebas.
+
+### Evidencia de ejecución
+
+![Resultados de las pruebas de integración del servicio de alertas](endpointsAlert.png)
+

@@ -33,6 +33,28 @@ def _require_utc_z(value: str) -> str:
     return value
 
 
+class AlertMatch(BaseModel):
+    """Coincidencia detectada que puede convertirse en una alerta persistida."""
+
+    rule_id: str
+    severity: Severity
+    title: str
+    description: str
+    grouping_key: str = Field(min_length=1, max_length=200)
+    simulation_id: str | None = None
+    owner_user_id: str | None = None
+    related_event_ids: list[str]
+    first_event_at: str
+    last_event_at: str
+
+    @field_validator("first_event_at", "last_event_at")
+    @classmethod
+    def validate_utc_timestamps(cls, value: str) -> str:
+        return _require_utc_z(value)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class AlertInDB(BaseModel):
     """Representación interna de una alerta persistida."""
 

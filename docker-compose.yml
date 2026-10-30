@@ -9,7 +9,9 @@ services:
       - ./docker/dynamodb:/home/dynamodblocal/data
 
   dynamodb-init:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: tracehunt-backend:local
     container_name: tracehunt-dynamodb-init
     command: ["python", "/dynamodb/init_tables.py"]
@@ -25,7 +27,9 @@ services:
     restart: "no"
 
   api:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     image: tracehunt-backend:local
     container_name: tracehunt-api
     env_file:

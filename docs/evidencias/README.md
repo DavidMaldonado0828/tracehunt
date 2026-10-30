@@ -360,3 +360,32 @@ Al finalizar, se eliminaron los registros creados exclusivamente para las prueba
 
 ![Resultados de las pruebas de integración del servicio de alertas](endpointsAlert.png)
 
+## PRUEBAS DEL MOTOR DE DETECCIÓN
+
+![Evidencia de las pruebas unitarias del motor de detección](test_enginepy.png)
+
+Estas pruebas verifican el ordenamiento cronológico de los eventos, la normalización de zonas horarias y el filtrado de eventos dentro de ventanas temporales. También comprueban el tratamiento de timestamps inválidos o sin zona horaria, los límites de las ventanas y el rechazo de periodos inválidos.
+
+### Resultado
+
+Las 13 pruebas finalizaron correctamente en 0.16 segundos.
+
+## PRUEBAS DE LAS REGLAS DE DETECCIÓN
+
+![Evidencia de las pruebas unitarias de las reglas de detección](pruebas_detection_rules.png)
+
+Estas pruebas comprueban las reglas AUTH-001, AUTH-002 y AUTH-003 con distintos usuarios, direcciones IP, resultados de autenticación y límites temporales. También verifican que las reglas no generen coincidencias cuando no se alcanza el umbral y que un mismo conjunto de eventos pueda activar reglas diferentes.
+
+### Resultado
+
+Las 18 pruebas finalizaron correctamente en 0.19 segundos.
+
+## EJECUCIÓN COMPLETA DE LA SUITE DE PRUEBAS
+
+![Evidencia de la suite completa de pruebas de TraceHunt](Pytest_Suite_Completa_passed.png)
+
+Esta ejecución verifica en conjunto las pruebas de API, el motor y las reglas de detección, el repositorio de eventos, el generador, los escenarios, el servicio y el repositorio de simulaciones, los esquemas y la gestión de usuarios.
+
+### Resultado
+
+La suite recopiló 122 pruebas y todas finalizaron correctamente en 3.10 segundos. Pytest informó una advertencia de deprecación relacionada con `starlette` y `anyio`; no impidió que las pruebas pasaran.

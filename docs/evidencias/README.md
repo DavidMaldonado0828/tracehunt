@@ -318,33 +318,45 @@ Se documenta la prueba de solicitudes repetidas utilizando la misma clave de ide
 
 ![Evidencia de idempotencia del simulador](simuladorIdempotencia.png)
 
+## Evidencias – Servicio de Alertas
 
-## PRUEBAS DEL MOTOR DE DETECCIÓN
+Se ejecutaron pruebas de integración directamente desde la consola, utilizando Python dentro del contenedor `api` de Docker Compose. Las pruebas verifican el funcionamiento de los endpoints de alertas, autenticación, permisos, cambios de estado, asignaciones y auditoría.
 
-![Evidencia de las pruebas unitarias del motor de detección](test_enginepy.png)
+### Cobertura de las pruebas
 
-Estas pruebas verifican el ordenamiento cronológico de los eventos, la normalización de zonas horarias y el filtrado de eventos dentro de ventanas temporales. También comprueban el tratamiento de timestamps inválidos o sin zona horaria, los límites de las ventanas y el rechazo de periodos inválidos.
+| N.º | Prueba | Resultado esperado |
+|---|---|---|
+| 1 | Consultar alertas sin autenticación | `401 Unauthorized` |
+| 2 | Ana consulta sus propias alertas | `200 OK` – solo muestra las de su propiedad |
+| 3 | Beto consulta sus alertas | `200 OK` – respeta la propiedad |
+| 4 | Administrador consulta todas las alertas abiertas | `200 OK` – muestra las tres alertas |
+| 5 | Filtrar alertas por gravedad y estado | `200 OK` – resultados coincidentes |
+| 6 | Consultar con un estado inválido | `422 Unprocessable Entity` |
+| 7–8 | Utilizar límites de paginación inválidos (`0` y `101`) | `422 Unprocessable Entity` |
+| 9 | Enviar un cursor de paginación inválido | `400` o `422`, nunca `5xx` |
+| 10 | Consultar el detalle de una alerta propia | `200 OK` |
+| 11 | Consultar una alerta perteneciente a otro analista | `404 Not Found` – misma respuesta que para una alerta inexistente |
+| 12 | Cambiar estado de `open` a `investigating` | `200 OK` |
+| 13 | Intentar una transición no permitida (`investigating` → `open`) | `409 Conflict` |
+| 14–15 | Enviar un estado inválido o campos adicionales | `422 Unprocessable Entity` |
+| 16–17 | Modificar una alerta ajena o realizar la petición sin autenticación | `404` / `401` |
+| 18 | Ana se asigna una alerta a sí misma | `200 OK` |
+| 19 | Ana intenta asignar la alerta a Beto | `422 Unprocessable Entity` |
+| 20 | Administrador asigna una alerta a Beto | `200 OK` |
+| 21 | Asignar una alerta a un usuario inexistente | `422 Unprocessable Entity` |
+| 22 | Consultar el historial de una alerta propia | `200 OK` – registra creación y cambio de estado |
+| 23 | Consultar el historial de una alerta ajena | `404 Not Found` |
+| 24 | Paginar el historial de auditoría | `200 OK` – páginas con registros diferentes |
 
-### Resultado
+### Entorno de ejecución
 
-Las 13 pruebas finalizaron correctamente en 0.16 segundos.
+Las pruebas se ejecutaron desde la terminal mediante Python y el contenedor `api` de Docker Compose. Se utilizó `urllib` para enviar solicitudes HTTP directamente a los endpoints de la aplicación, sin utilizar Swagger.
 
-## PRUEBAS DE LAS REGLAS DE DETECCIÓN
+Se crearon dos usuarios analistas, tres alertas de prueba y se utilizó la cuenta de administrador configurada en el entorno.
 
-![Evidencia de las pruebas unitarias de las reglas de detección](pruebas_detection_rules.png)
+Al finalizar, se eliminaron los registros creados exclusivamente para las pruebas.
 
-Estas pruebas comprueban las reglas AUTH-001, AUTH-002 y AUTH-003 con distintos usuarios, direcciones IP, resultados de autenticación y límites temporales. También verifican que las reglas no generen coincidencias cuando no se alcanza el umbral y que un mismo conjunto de eventos pueda activar reglas diferentes.
+### Evidencia de ejecución
 
-### Resultado
+![Resultados de las pruebas de integración del servicio de alertas](endpointsAlert.png)
 
-Las 18 pruebas finalizaron correctamente en 0.19 segundos.
-
-## EJECUCIÓN COMPLETA DE LA SUITE DE PRUEBAS
-
-![Evidencia de la suite completa de pruebas de TraceHunt](Pytest_Suite_Completa_passed.png)
-
-Esta ejecución verifica en conjunto las pruebas de API, el motor y las reglas de detección, el repositorio de eventos, el generador, los escenarios, el servicio y el repositorio de simulaciones, los esquemas y la gestión de usuarios.
-
-### Resultado
-
-La suite recopiló 122 pruebas y todas finalizaron correctamente en 3.10 segundos. Pytest informó una advertencia de deprecación relacionada con `starlette` y `anyio`; no impidió que las pruebas pasaran.

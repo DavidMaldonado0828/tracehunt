@@ -29,7 +29,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: backend/dockerfile
     image: tracehunt-backend:local
     container_name: tracehunt-api
     env_file:

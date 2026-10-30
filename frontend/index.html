@@ -10,7 +10,7 @@
 </head>
 <body>
   <main class="shell">
-    <section id="login-panel" class="login-card" aria-labelledby="login-title" hidden>
+    <section id="login-panel" class="login-card" aria-labelledby="login-title">
       <div class="brand-mark" aria-hidden="true">T</div>
       <p class="eyebrow">TRACEHUNT</p>
       <h1 id="login-title">Iniciar sesión</h1>
@@ -29,27 +29,28 @@
       <header class="topbar">
         <a class="brand" href="/ui" aria-label="TraceHunt inicio"><span class="brand-mark small">T</span><span>TraceHunt</span></a>
         <div class="account-area">
-          <div class="account-copy"><strong id="account-email">—</strong><span id="account-role" class="muted"></span></div>
+          <div class="account-copy"><strong id="account-name">—</strong><span id="account-email" class="muted"></span><span id="account-role" class="muted"></span></div>
           <button id="logout-button" class="button secondary" type="button">Cerrar sesión</button>
         </div>
       </header>
 
       <div id="global-notice" class="notice page-notice" role="alert" hidden></div>
 
-      <nav class="tabs" aria-label="Secciones principales">
+      <nav id="main-tabs" class="tabs" aria-label="Secciones principales">
         <button class="tab active" type="button" data-tab="alerts-view" aria-selected="true">Alertas</button>
         <button class="tab" type="button" data-tab="simulator-view" aria-selected="false">Simulador</button>
+        <button id="users-tab" class="tab" type="button" data-tab="users-view" aria-selected="false" hidden>Usuarios</button>
       </nav>
 
       <section id="alerts-view" class="view">
         <div class="section-heading">
           <div><p class="eyebrow">INVESTIGACIÓN</p><h1>Alertas</h1><p class="muted">Filtra, revisa evidencia y gestiona alertas.</p></div>
-          <button id="refresh-alerts" class="button secondary" type="button">Actualizar</button>
+          <div class="refresh-controls"><span id="alerts-updated-at" class="muted small-text"></span><button id="refresh-alerts" class="button secondary" type="button">Actualizar</button></div>
         </div>
         <form id="alert-filters" class="filter-bar">
           <label>Estado
             <select id="status-filter" name="status">
-              <option value="">Todos</option><option value="open">Abierta</option><option value="investigating">En investigación</option><option value="resolved">Resuelta</option>
+              <option value="">Todas</option><option value="open">Abiertas</option><option value="investigating">En investigación</option><option value="resolved">Resueltas</option>
             </select>
           </label>
           <label>Severidad
@@ -58,13 +59,15 @@
             </select>
           </label>
           <button class="button primary" type="submit">Aplicar filtros</button>
+          <button id="clear-alert-filters" class="button secondary" type="button">Limpiar filtros</button>
         </form>
 
+        <p id="alert-scope" class="muted small-text alert-scope" aria-live="polite"></p>
         <div class="content-grid">
           <section class="card table-card" aria-label="Lista de alertas">
             <div class="table-scroll">
               <table>
-                <thead><tr><th>Severidad</th><th>Título</th><th>Regla</th><th>Estado</th><th>Asignada a</th><th>Creada</th></tr></thead>
+                <thead><tr id="alert-headings"><th>Severidad</th><th>Título</th><th>Regla</th><th>Estado</th><th>Asignada a</th><th id="alert-owner-heading" class="owner-heading" hidden>Dueño</th><th>Creada</th></tr></thead>
                 <tbody id="alert-rows"><tr><td class="empty-cell" colspan="6">Inicia sesión para cargar alertas.</td></tr></tbody>
               </table>
             </div>
@@ -74,6 +77,28 @@
             <div class="empty-state"><span class="empty-icon" aria-hidden="true">⌕</span><h2>Selecciona una alerta</h2><p class="muted">El detalle y el historial aparecerán aquí.</p></div>
           </aside>
         </div>
+      </section>
+
+      <section id="users-view" class="view" hidden>
+        <div class="section-heading">
+          <div><p class="eyebrow">ADMINISTRACIÓN</p><h1>Usuarios</h1><p class="muted">Crea cuentas y administra sus roles y acceso.</p></div>
+          <button id="refresh-users" class="button secondary" type="button">Actualizar</button>
+        </div>
+        <div id="users-notice" class="notice" role="alert" hidden></div>
+        <form id="create-user-form" class="card user-form">
+          <h2>Crear usuario</h2>
+          <label for="new-user-email">Correo</label><input id="new-user-email" name="email" type="email" autocomplete="off" required>
+          <label for="new-user-name">Nombre</label><input id="new-user-name" name="display_name" type="text" maxlength="100" required>
+          <label for="new-user-password">Contraseña</label><input id="new-user-password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <label for="new-user-role">Rol</label><select id="new-user-role" name="role"><option value="analyst">Analista</option><option value="admin">Administrador</option></select>
+          <button class="button primary" type="submit">Crear usuario</button>
+        </form>
+        <section class="card table-card users-table-card" aria-label="Cuentas de usuario">
+          <div class="table-scroll"><table>
+            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Creado</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+            <tbody id="user-rows"><tr><td class="empty-cell" colspan="7">Carga las cuentas para comenzar.</td></tr></tbody>
+          </table></div>
+        </section>
       </section>
 
       <section id="simulator-view" class="view" hidden>
@@ -92,7 +117,7 @@
             <p class="muted small-text">El periodo no puede superar 30 días.</p>
           </form>
           <section id="simulation-result" class="card result-card" aria-live="polite">
-            <div class="empty-state"><span class="empty-icon" aria-hidden="true">↗</span><h2>Resultado</h2><p class="muted">Completa el formulario para iniciar una simulación.</p></div>
+            <div class="empty-state"><span class="empty-icon" aria-hidden="true">↗</span><h2>Resultado</h2><p class="muted">Aún no has ejecutado ninguna simulación.</p></div>
           </section>
         </div>
       </section>

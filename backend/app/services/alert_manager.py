@@ -31,7 +31,7 @@ from app.services import audit_service
 logger = logging.getLogger("uvicorn.error")
 
 ALLOWED_TRANSITIONS = {
-    "open": {"investigating", "resolved"},
+    "open": {"investigating"},
     "investigating": {"resolved"},
     "resolved": set(),
 }
@@ -92,7 +92,7 @@ def register_matches(matches: list[AlertMatch]) -> RegisterResult:
                 last_event_at=match.last_event_at,
                 related_event_ids=related_event_ids,
                 simulation_id=match.simulation_id,
-                assigned_to=None,
+                assigned_to=match.owner_user_id,
                 owner_user_id=match.owner_user_id,
                 updated_at=created_at,
             )
@@ -181,6 +181,14 @@ def change_status(
     """Valida permisos y guarda estado más auditoría en una única transacción."""
     alert = get_alert_for_actor(alert_id, actor=actor)
     if new_status not in ALLOWED_TRANSITIONS.get(alert.status, set()):
+        if alert.status == "resolved":
+            raise InvalidTransitionError("La alerta ya está resuelta y su estado es final.")
+        if new_status == "open":
+            raise InvalidTransitionError("No se puede retroceder el estado de una alerta.")
+        if alert.status == "open" and new_status == "resolved":
+            raise InvalidTransitionError(
+                "No se puede pasar de 'open' a 'resolved': primero debe pasar a 'investigating'."
+            )
         raise InvalidTransitionError(
             f"La transición {alert.status} -> {new_status} no permitida."
         )
@@ -212,12 +220,11 @@ def assign_to(
 ) -> AlertInDB:
     """Valida el destinatario y guarda asignación y auditoría atómicamente."""
     get_alert_for_actor(alert_id, actor=actor)
+    if actor.role != "admin":
+        raise InvalidAssigneeError("Solo un administrador puede asignar alertas.")
     assignee = get_by_user_id(assignee_user_id)
     if assignee is None or assignee.status != "active":
         raise InvalidAssigneeError("El usuario asignado no existe o no está activo.")
-    if actor.role == "analyst" and assignee_user_id != actor.user_id:
-        raise InvalidAssigneeError("Un analyst solo puede asignarse alertas a sí mismo.")
-
     changed_at = utc_now_iso()
     audit_record = audit_service.build_assignment_record(
         alert_id,

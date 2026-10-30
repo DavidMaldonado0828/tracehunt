@@ -13,6 +13,7 @@ from boto3.dynamodb.types import TypeSerializer
 from fastapi import HTTPException
 
 from app.core.config import get_settings
+from app.detectors.rules import DetectionResult, evaluate_all_rules
 from app.repositories.dynamo_client import get_dynamodb_resource
 from app.repositories.events import EventsRepository, UnprocessedEventsError
 from app.repositories.simulations import (
@@ -23,6 +24,8 @@ from app.repositories.simulations import (
     update_simulation,
 )
 from app.schemas.simulations import SimulationCreate
+from app.schemas.alerts import AlertMatch
+from app.services.alert_manager import register_matches
 from app.simulator.generator import generate_events
 
 
@@ -154,6 +157,78 @@ def _serialize_events_for_low_level_client(
 ) -> list[dict[str, dict[str, Any]]]:
     """Serializa todos los eventos para BatchWriteItem."""
     return [_serialize_event_for_low_level_client(event) for event in events]
+
+
+def _detection_timestamp_iso(value: datetime) -> str:
+    """Serializa un instante detectado en UTC con el formato exigido por AlertMatch."""
+    return _utc_iso(value).replace("+00:00", "Z")
+
+
+def _detection_grouping_key(match: DetectionResult) -> str:
+    """Crea una identidad estable para el replay exacto de una coincidencia."""
+    identity = {
+        "rule_id": match.rule_id,
+        "metadata": dict(match.metadata),
+        "related_event_ids": list(match.related_event_ids),
+        "first_event_at": _detection_timestamp_iso(match.first_event_at),
+        "last_event_at": _detection_timestamp_iso(match.last_event_at),
+    }
+    payload = json.dumps(
+        identity,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return f"match-{digest}"
+
+
+def _detection_to_alert_match(
+    match: DetectionResult,
+    simulation: dict[str, Any],
+) -> AlertMatch:
+    """Convierte un resultado de regla en el contrato persistible de alerta."""
+    rule_text = {
+        "AUTH-001": (
+            "Fallos repetidos de autenticación",
+            "Se detectaron al menos cinco fallos del mismo usuario e IP "
+            "dentro de cinco minutos.",
+        ),
+        "AUTH-002": (
+            "Una IP prueba varias cuentas",
+            "Se detectaron fallos desde una IP contra al menos cinco usuarios "
+            "distintos dentro de diez minutos.",
+        ),
+        "AUTH-003": (
+            "Inicio de sesión exitoso después de fallos",
+            "Se detectaron al menos cinco fallos del mismo usuario e IP "
+            "seguidos por un inicio de sesión exitoso dentro de cinco minutos.",
+        ),
+    }
+    try:
+        title, description = rule_text[match.rule_id]
+    except KeyError:
+        raise ValueError("La detección contiene una regla no soportada.") from None
+
+    simulation_id = simulation.get("simulation_id")
+    owner_user_id = simulation.get("requested_by_user_id")
+    if not isinstance(simulation_id, str) or not simulation_id:
+        raise ValueError("La simulación no contiene un simulation_id válido.")
+    if not isinstance(owner_user_id, str) or not owner_user_id:
+        raise ValueError("La simulación no contiene un solicitante válido.")
+
+    return AlertMatch(
+        rule_id=match.rule_id,
+        severity=match.severity,
+        title=title,
+        description=description,
+        grouping_key=_detection_grouping_key(match),
+        simulation_id=simulation_id,
+        owner_user_id=owner_user_id,
+        related_event_ids=list(match.related_event_ids),
+        first_event_at=_detection_timestamp_iso(match.first_event_at),
+        last_event_at=_detection_timestamp_iso(match.last_event_at),
+    )
 
 
 def _get_events_repository() -> EventsRepository:
@@ -345,11 +420,10 @@ def execute_simulation(
     events_repository: EventsRepository | None = None,
 ) -> dict[str, Any]:
     """
-    Genera y persiste los eventos de una ejecución pendiente.
+    Genera y persiste los eventos, detecta coincidencias y registra alertas.
 
-    Esta función no implementa recuperación mediante checkpoints ni ejecuta
-    el motor de detección. Si BatchWriteItem falla, pueden quedar eventos
-    persistidos; el conteo solo incluye los que pudieron confirmarse.
+    Esta función no implementa recuperación mediante checkpoints. Si la
+    persistencia de eventos falla, no ejecuta el motor de detección.
     """
     simulation_id = _validate_identifier(simulation_id, "simulation_id")
     simulation = get_simulation(simulation_id)
@@ -365,6 +439,8 @@ def execute_simulation(
     # Esta transición todavía no es compare-and-set en el repositorio actual.
     running = transition_simulation(simulation_id, new_status="running")
     persisted_count = int(simulation.get("generated_event_count", 0))
+    processed_count = int(simulation.get("processed_event_count", 0))
+    created_alert_count = int(simulation.get("created_alert_count", 0))
 
     try:
         started_at = running.get("started_at")
@@ -419,13 +495,38 @@ def execute_simulation(
             persisted_count += len(batch)
             _update_generated_count(simulation_id, persisted_count)
 
+        # Se evalúa el lote original solo después de confirmar todos los writes.
+        detections = evaluate_all_rules(generated_batch.events)
+        processed_count = len(generated_batch.events)
+        alert_matches = [
+            _detection_to_alert_match(detection, simulation)
+            for detection in detections
+        ]
+        registration = register_matches(alert_matches)
+        created_alert_count = registration.created
+
+        if registration.failed:
+            return transition_simulation(
+                simulation_id,
+                new_status="partial",
+                changes={
+                    "generated_event_count": persisted_count,
+                    "processed_event_count": processed_count,
+                    "created_alert_count": created_alert_count,
+                    "error_summary": (
+                        "La ejecución quedó incompleta porque algunas "
+                        "alertas no pudieron persistirse."
+                    ),
+                },
+            )
+
         return transition_simulation(
             simulation_id,
             new_status="completed",
             changes={
                 "generated_event_count": persisted_count,
-                "processed_event_count": 0,
-                "created_alert_count": 0,
+                "processed_event_count": processed_count,
+                "created_alert_count": created_alert_count,
                 "error_summary": "",
             },
         )
@@ -440,6 +541,8 @@ def execute_simulation(
                     new_status="partial",
                     changes={
                         "generated_event_count": persisted_count,
+                        "processed_event_count": processed_count,
+                        "created_alert_count": created_alert_count,
                         "error_summary": _safe_error_summary(error),
                     },
                 )

@@ -1,6 +1,6 @@
 """Pruebas unitarias del servicio de simulaciones."""
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 import pytest
@@ -11,6 +11,7 @@ from app.repositories.simulations import (
     SimulationAlreadyExistsError,
     SimulationNotFoundError,
 )
+from app.detectors.rules import DetectionResult
 from app.schemas.simulations import SimulationCreate
 from app.services import simulation_service
 
@@ -447,9 +448,37 @@ class FakeEventsRepository:
 
 def _generated_events(count: int) -> list[dict[str, Any]]:
     return [
-        {"event_id": f"event-{index}", "sequence": index}
+        {
+            "event_id": f"event-{index}",
+            "event_type": "login",
+            "timestamp": (
+                datetime(2026, 1, 1, tzinfo=timezone.utc)
+                + timedelta(seconds=index)
+            ).isoformat().replace("+00:00", "Z"),
+            "ingested_at": "2026-01-01T00:00:00Z",
+            "username": f"user-{index}",
+            "username_key": f"USER#user-{index}",
+            "source_ip": "192.0.2.10",
+            "result": "success",
+            "date_bucket": "DATE#2026-01-01",
+            "timestamp_event": f"2026-01-01T00:00:{index:02d}Z#event-{index}",
+            "simulation_id": "SIM-test",
+            "data_source": "simulator",
+            "scenario_type": "normal_traffic",
+        }
         for index in range(count)
     ]
+
+
+def _detection_result(*, event_ids: tuple[str, ...]) -> DetectionResult:
+    return DetectionResult(
+        rule_id="AUTH-001",
+        severity="high",
+        related_event_ids=event_ids,
+        first_event_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        last_event_at=datetime(2026, 1, 1, 0, 4, tzinfo=timezone.utc),
+        metadata={"username_key": "USER#alice", "source_ip": "192.0.2.10"},
+    )
 
 
 def test_execute_simulation_writes_batches_of_at_most_25(
@@ -500,6 +529,10 @@ def test_execute_simulation_writes_batches_of_at_most_25(
     )
 
     repository = FakeEventsRepository()
+    evaluate_mock = Mock(return_value=[])
+    register_mock = Mock(return_value=Mock(created=0, failed=0))
+    monkeypatch.setattr(simulation_service, "evaluate_all_rules", evaluate_mock)
+    monkeypatch.setattr(simulation_service, "register_matches", register_mock)
 
     result = simulation_service.execute_simulation(
         "SIM-test",
@@ -510,9 +543,150 @@ def test_execute_simulation_writes_batches_of_at_most_25(
     assert [len(batch) for batch in repository.batches] == [25, 5]
     assert repository.batches[0][0] == {
         "event_id": {"S": "event-0"},
-        "sequence": {"N": "0"},
+        "event_type": {"S": "login"},
+        "timestamp": {"S": "2026-01-01T00:00:00Z"},
+        "ingested_at": {"S": "2026-01-01T00:00:00Z"},
+        "username": {"S": "user-0"},
+        "username_key": {"S": "USER#user-0"},
+        "source_ip": {"S": "192.0.2.10"},
+        "result": {"S": "success"},
+        "date_bucket": {"S": "DATE#2026-01-01"},
+        "timestamp_event": {"S": "2026-01-01T00:00:00Z#event-0"},
+        "simulation_id": {"S": "SIM-test"},
+        "data_source": {"S": "simulator"},
+        "scenario_type": {"S": "normal_traffic"},
     }
     assert update_count_mock.call_count == 2
+    evaluate_mock.assert_called_once()
+    assert evaluate_mock.call_args.args[0][0]["event_id"] == "event-0"
+    register_mock.assert_called_once_with([])
+
+
+def test_execute_simulation_converts_detections_and_registers_alerts(
+    simulation_item: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    running = {
+        **simulation_item,
+        "status": "running",
+        "started_at": "2026-01-01T00:00:00+00:00",
+    }
+    completed = {**running, "status": "completed"}
+    monkeypatch.setattr(
+        simulation_service,
+        "get_simulation",
+        Mock(return_value=simulation_item),
+    )
+    transition_mock = Mock(side_effect=[running, completed])
+    monkeypatch.setattr(
+        simulation_service,
+        "transition_simulation",
+        transition_mock,
+    )
+    events = _generated_events(5)
+    monkeypatch.setattr(
+        simulation_service,
+        "generate_events",
+        Mock(return_value=Mock(events=events, effective_seed=123)),
+    )
+    repository = FakeEventsRepository()
+    repository.MAX_BATCH_SIZE = 3
+    detection = _detection_result(event_ids=tuple(event["event_id"] for event in events))
+    evaluate_mock = Mock(
+        side_effect=lambda received: [detection]
+        if received is events and len(repository.batches) == 2
+        else []
+    )
+    monkeypatch.setattr(simulation_service, "evaluate_all_rules", evaluate_mock)
+    register_mock = Mock(
+        return_value=Mock(created=1, existing=2, failed=0)
+    )
+    monkeypatch.setattr(simulation_service, "register_matches", register_mock)
+    monkeypatch.setattr(simulation_service, "_update_generated_count", Mock())
+
+    result = simulation_service.execute_simulation(
+        "SIM-test",
+        events_repository=repository,  # type: ignore[arg-type]
+    )
+
+    assert result["status"] == "completed"
+    assert [len(batch) for batch in repository.batches] == [3, 2]
+    evaluate_mock.assert_called_once_with(events)
+    matches = register_mock.call_args.args[0]
+    assert len(matches) == 1
+    match = matches[0]
+    assert match.rule_id == "AUTH-001"
+    assert match.severity == "high"
+    assert match.simulation_id == "SIM-test"
+    assert match.owner_user_id == "user-1"
+    assert match.related_event_ids == [event["event_id"] for event in events]
+    assert match.first_event_at == "2026-01-01T00:00:00Z"
+    assert match.last_event_at == "2026-01-01T00:04:00Z"
+    assert len(match.grouping_key) <= 200
+    assert transition_mock.call_args.kwargs["changes"]["processed_event_count"] == 5
+    assert transition_mock.call_args.kwargs["changes"]["created_alert_count"] == 1
+
+
+def test_detection_grouping_key_is_stable_for_exact_replay_and_distinguishes_evidence() -> None:
+    first = _detection_result(event_ids=("event-1", "event-2", "event-3"))
+    exact_replay = _detection_result(event_ids=("event-1", "event-2", "event-3"))
+    separate_match = _detection_result(event_ids=("event-4", "event-5", "event-6"))
+
+    first_key = simulation_service._detection_grouping_key(first)
+
+    assert first_key == simulation_service._detection_grouping_key(exact_replay)
+    assert first_key != simulation_service._detection_grouping_key(separate_match)
+
+
+def test_failed_alert_registration_returns_partial_with_counts(
+    simulation_item: dict[str, object],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    running = {
+        **simulation_item,
+        "status": "running",
+        "started_at": "2026-01-01T00:00:00+00:00",
+    }
+    partial = {**running, "status": "partial"}
+    monkeypatch.setattr(
+        simulation_service,
+        "get_simulation",
+        Mock(return_value=simulation_item),
+    )
+    transition_mock = Mock(side_effect=[running, partial])
+    monkeypatch.setattr(
+        simulation_service,
+        "transition_simulation",
+        transition_mock,
+    )
+    monkeypatch.setattr(
+        simulation_service,
+        "generate_events",
+        Mock(return_value=Mock(events=_generated_events(4), effective_seed=123)),
+    )
+    monkeypatch.setattr(
+        simulation_service,
+        "evaluate_all_rules",
+        Mock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        simulation_service,
+        "register_matches",
+        Mock(return_value=Mock(created=2, failed=1)),
+    )
+    monkeypatch.setattr(simulation_service, "_update_generated_count", Mock())
+
+    result = simulation_service.execute_simulation(
+        "SIM-test",
+        events_repository=FakeEventsRepository(),  # type: ignore[arg-type]
+    )
+
+    assert result["status"] == "partial"
+    changes = transition_mock.call_args.kwargs["changes"]
+    assert changes["generated_event_count"] == 4
+    assert changes["processed_event_count"] == 4
+    assert changes["created_alert_count"] == 2
+    assert "algunas alertas" in changes["error_summary"]
 
 
 def test_execute_simulation_rejects_non_pending_record(
@@ -542,8 +716,14 @@ def test_execute_simulation_records_confirmed_items_on_partial_write(
     simulation_item: dict[str, object],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    running = {
+    simulation_with_existing_counts = {
         **simulation_item,
+        "generated_event_count": 10,
+        "processed_event_count": 7,
+        "created_alert_count": 4,
+    }
+    running = {
+        **simulation_with_existing_counts,
         "status": "running",
         "started_at": "2026-01-01T00:00:00+00:00",
     }
@@ -553,7 +733,7 @@ def test_execute_simulation_records_confirmed_items_on_partial_write(
         "get_simulation",
         Mock(
             side_effect=[
-                simulation_item,
+                simulation_with_existing_counts,
                 running,
             ]
         ),
@@ -589,6 +769,10 @@ def test_execute_simulation_records_confirmed_items_on_partial_write(
         "_update_generated_count",
         update_count_mock,
     )
+    evaluate_mock = Mock()
+    register_mock = Mock()
+    monkeypatch.setattr(simulation_service, "evaluate_all_rules", evaluate_mock)
+    monkeypatch.setattr(simulation_service, "register_matches", register_mock)
 
     with pytest.raises(UnprocessedEventsError):
         simulation_service.execute_simulation(
@@ -596,9 +780,14 @@ def test_execute_simulation_records_confirmed_items_on_partial_write(
             events_repository=repository,  # type: ignore[arg-type]
         )
 
-    update_count_mock.assert_called_once_with("SIM-test", 2)
+    update_count_mock.assert_called_once_with("SIM-test", 12)
+    evaluate_mock.assert_not_called()
+    register_mock.assert_not_called()
     assert transition_mock.call_args.kwargs["new_status"] == "partial"
-    assert transition_mock.call_args.kwargs["changes"]["generated_event_count"] == 2
+    changes = transition_mock.call_args.kwargs["changes"]
+    assert changes["generated_event_count"] == 12
+    assert changes["processed_event_count"] == 7
+    assert changes["created_alert_count"] == 4
     assert (
         transition_mock.call_args.kwargs["changes"]["error_summary"]
         == "La ejecución no pudo completarse. "

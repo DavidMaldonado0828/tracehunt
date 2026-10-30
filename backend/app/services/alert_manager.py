@@ -16,6 +16,7 @@ from app.repositories.alerts import (
     create_alert,
     get_alert,
     list_alerts,
+    list_alerts_all_statuses,
 )
 from app.repositories.users import get_by_user_id
 from app.schemas.alerts import (
@@ -140,20 +141,34 @@ def list_alerts_for_actor(
     status: str | None = None,
     severity: str | None = None,
     limit: int = 25,
-    exclusive_start_key: dict[str, Any] | None = None,
+    cursor_state: dict[str, Any] | None = None,
 ) -> tuple[list[AlertInDB], dict[str, Any] | None]:
     """Aplica el alcance por rol y delega la paginación al repositorio."""
-    owner_user_id = actor.user_id if actor.role == "analyst" else None
     if actor.role == "admin" and status is None and severity is None:
-        # No existe un índice que permita listar todas las alertas sin una clave de partición.
-        status = "open"
-    return list_alerts(
+        if cursor_state is not None and cursor_state.get("mode") != "all_statuses":
+            raise ValueError("El cursor no corresponde a la consulta de alertas.")
+        return list_alerts_all_statuses(
+            limit=limit,
+            cursor_state=cursor_state,
+        )
+
+    if cursor_state is not None and cursor_state.get("mode") != "single":
+        raise ValueError("El cursor no corresponde a la consulta de alertas.")
+
+    owner_user_id = actor.user_id if actor.role == "analyst" else None
+    alerts, last_key = list_alerts(
         status=status,
         severity=severity,
         owner_user_id=owner_user_id,
         limit=limit,
-        exclusive_start_key=exclusive_start_key,
+        exclusive_start_key=(cursor_state or {}).get("exclusive_start_key"),
     )
+    next_state = (
+        {"mode": "single", "exclusive_start_key": last_key}
+        if last_key is not None
+        else None
+    )
+    return alerts, next_state
 
 
 def change_status(

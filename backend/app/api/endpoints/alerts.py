@@ -23,6 +23,11 @@ from app.schemas.alerts import (
 )
 from app.schemas.users import UserInDB
 from app.services import alert_manager
+from app.services.pagination import (
+    InvalidAlertCursorError,
+    decode_alert_cursor,
+    encode_alert_cursor,
+)
 
 logger = logging.getLogger("uvicorn.error")
 router = APIRouter(tags=["alerts"])
@@ -70,18 +75,37 @@ def list_alerts(
     cursor: str | None = Query(default=None),
 ) -> AlertListResponse:
     """Lista una página y delega alcance por propietario al servicio."""
-    exclusive_start_key = decode_cursor(cursor)
     try:
-        alerts, last_key = alert_manager.list_alerts_for_actor(
+        cursor_state = decode_alert_cursor(
+            cursor,
             actor=current_user,
             status=alert_status,
             severity=severity,
             limit=limit,
-            exclusive_start_key=exclusive_start_key,
+        )
+    except InvalidAlertCursorError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cursor inválido o incompatible con la consulta.",
+        ) from None
+
+    try:
+        alerts, next_state = alert_manager.list_alerts_for_actor(
+            actor=current_user,
+            status=alert_status,
+            severity=severity,
+            limit=limit,
+            cursor_state=cursor_state,
         )
         return AlertListResponse(
             items=[alert.to_public() for alert in alerts],
-            next_cursor=encode_cursor(last_key),
+            next_cursor=encode_alert_cursor(
+                next_state,
+                actor=current_user,
+                status=alert_status,
+                severity=severity,
+                limit=limit,
+            ),
         )
     except Exception as error:
         _raise_service_error(error)
